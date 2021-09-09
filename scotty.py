@@ -62,7 +62,6 @@ for fqdn, metadata in config['servers'].items():
             description.append(f'{data}'.ljust(20))
 
     description = ' '.join(description)
-    print(description)
 
     servers_display.append(description)
 

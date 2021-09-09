@@ -52,8 +52,6 @@ for fqdn, metadata in config['servers'].items():
     for field in ['description']:
         if field in metadata:
 
-            print(metadata[field])
-
             if isinstance(metadata[field], list):
                 data = ','.join(metadata[field])
             else:

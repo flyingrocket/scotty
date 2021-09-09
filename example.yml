@@ -1,0 +1,20 @@
+---
+servers:
+  # fqdn or server name for ssh
+  myserver1.mydomain: {}
+  myserver2.mydomain:
+    locations: [mylogs, myapp]
+    description: "awsome server"
+
+locations:
+  # use a server name
+  myserver1.mydomain:
+    - /path/to/location1
+  # use an alias for locations
+  myapp:
+    - /path/to/location2
+    - /path/to/location3
+    - /path/to/location4
+  mylogs:
+    - /path/to/location5
+    - /path/to/location6

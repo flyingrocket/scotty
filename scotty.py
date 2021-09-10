@@ -91,6 +91,7 @@ if not len(locations):
     print('No location found...')
     sys.exit(1)
 
+locations.sort()
 questions = [inquirer.List('select_location', message=f'Select location:', choices=locations,),]
 answers = inquirer.prompt(questions)
 selected_location = answers['select_location']

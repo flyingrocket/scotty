@@ -78,13 +78,8 @@ if not os.path.exists(file_path):
     sys.exit(f'Config file "{file_path}" not found!')
 
 # -----------------------------------------------
-# Valdate config file
+# Read config file
 # -----------------------------------------------
-file_path = os.path.abspath(args.configfile)
-if not os.path.exists(file_path):
-    print('Config file does not exist.')
-    sys.exit(1)
-
 # read the yaml file
 with open(file_path) as file:
     # config = yaml.load(file, Loader=yaml.SafeLoader)

@@ -10,7 +10,16 @@ import re
 import sys
 import yaml
 
+# -----------------------------------------------
+# Variables
+# -----------------------------------------------
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+
 appname = "scotty"
+homedir = os.path.abspath(os.getenv("HOME"))
+default_browse_dirs = f"{homedir}/.{appname}/conf.d/"
+default_browse_dirs = f"/etc/{appname}/conf.d/,{homedir}/.{appname}/conf.d/"
 
 # -----------------------------------------------
 # Arguments
@@ -28,8 +37,13 @@ group.add_argument(
     required=False,
     action="store_true",
 )
-group.add_argument(
-    "-d", "--configdir", help="browse through given config dir", required=False
+
+# browse configuration files
+parser.add_argument(
+    "--browse-dirs",
+    help=f"browse dir(s) - seperated by comma - for available config files. defaults to {default_browse_dirs}",
+    default=default_browse_dirs,
+    required=False,
 )
 
 parser.add_argument(
@@ -45,47 +59,40 @@ args = parser.parse_args()
 # -----------------------------------------------
 # Get config file
 # -----------------------------------------------
-homedir = os.getenv("HOME")
-config_file = args.configfile
+config_file = args.config_file
 
-if args.configfile:
+if args.config_file:
     if re.match("^~\/", config_file):
         file_path = os.path.abspath(config_file.replace("~", homedir))
     elif re.match("^\.\/", config_file) or re.match("^\/", config_file):
         file_path = os.path.abspath(config_file)
     else:
         file_path = os.path.abspath("./" + config_file)
-else:
+elif args.browse:
     # search paths
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
 
-    paths_found = []
+    config_dirs_found = []
 
-    if args.configdir:
-        paths_search = [args.configdir]
-    else:
-        confdir_current = dname + "/conf.d/"
-        confdir_home = os.path.abspath(homedir) + f"/.{appname}/conf.d/"
-        confdir_global = f"/etc/{appname}/conf.d/"
-
-        paths_search = [confdir_home, confdir_global]
-
-    for path in paths_search:
+    for path in args.browse_dirs.split(","):
         if os.path.exists(path):
-            paths_found.append(path)
+            config_dirs_found.append(os.path.abspath(path))
+        else:
+            # only fail if specific paths are given
+            if not args.browse_dirs == default_browse_dirs:
+                sys.exit(f"Config dir {path} not found!")
 
-    paths_search_display = ", ".join(paths_search)
+    print(f"Browse '{args.browse_dirs}' directories...")
 
-    if not len(paths_found):
-        sys.exit(f"No config dirs found: {paths_search_display}")
+    if not len(config_dirs_found):
+        sys.exit(f"No config dirs found. Search path(s): {args.browse_dirs}")
 
     config_files = []
-    for path in paths_found:
-        config_files += glob.glob(f"{path}*.yml")
+    for path in config_dirs_found:
+        path = path.rstrip("/")
+        config_files += glob.glob(f"{path}/*.yml")
 
     if not len(config_files):
-        sys.exit(f"No config files found: {paths_search_display}")
+        sys.exit(f"No config files found!")
 
     questions = [
         inquirer.List(
@@ -96,6 +103,8 @@ else:
     ]
     answers = inquirer.prompt(questions)
     file_path = answers["select_path"]
+else:
+    sys.exit()
 
 if not os.path.exists(file_path):
     sys.exit(f'Config file "{file_path}" not found!')

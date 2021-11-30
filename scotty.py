@@ -27,7 +27,7 @@ default_browse_dirs = f"/etc/{appname}/conf.d/,{homedir}/.{appname}/conf.d/"
 parser = argparse.ArgumentParser("Ssh into remote directories...")
 
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("-c", "--configfile", help="config yaml file", required=False)
+group.add_argument("-c", "--config-file", help="config yaml file", required=False)
 
 # browse configuration files
 group.add_argument(

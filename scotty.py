@@ -84,7 +84,7 @@ elif args.browse:
     print(f"Browse '{args.browse_dirs}' directories...")
 
     if not len(config_dirs_found):
-        sys.exit(f"No config dirs found. Search path(s): {args.browse_dirs}")
+        sys.exit(f"No config dirs found.")
 
     config_files = []
     for path in config_dirs_found:

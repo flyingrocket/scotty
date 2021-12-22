@@ -94,6 +94,8 @@ elif args.browse:
     if not len(config_files):
         sys.exit(f"No config files found!")
 
+    config_files.sort()
+
     questions = [
         inquirer.List(
             "select_path",
@@ -149,6 +151,7 @@ for fqdn, metadata in config["servers"].items():
     servers_display.append(description)
 
 servers_display.sort()
+
 questions = [
     inquirer.List(
         "select_server",
@@ -183,6 +186,7 @@ if not len(locations):
     sys.exit(1)
 
 locations.sort()
+
 questions = [
     inquirer.List(
         "select_location",

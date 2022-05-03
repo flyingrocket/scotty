@@ -207,15 +207,6 @@ elif args.browse:
 
     config_files.sort()
 
-    # questions = [
-    #     inquirer.List(
-    #         "select_path",
-    #         message=f"Select config file:",
-    #         choices=config_files,
-    #     ),
-    # ]
-    # answers = inquirer.prompt(questions)
-    # file_path = answers["select_path"]
     file_path = iterfzf(config_files, multi=False, exact=True)
 
 else:
@@ -265,16 +256,6 @@ for fqdn, metadata in config["servers"].items():
 
 servers_display.sort()
 
-# questions = [
-#     inquirer.List(
-#         "select_server",
-#         message=f"Select server:",
-#         choices=servers_display,
-#     ),
-# ]
-# answers = inquirer.prompt(questions)
-# selected_server = answers["select_server"]
-
 selected_server = iterfzf(servers_display, multi=False, exact=True)
 
 # -----------------------------------------------
@@ -304,25 +285,19 @@ locations.append("/")
 
 home_dir = sub_check(f"ssh {selected_server} 'eval echo $HOME'")
 locations.append(home_dir)
+# locations.append("~")  # home dir
+locations.append("")  # home dir (default)
 
 locations.sort()
 
-# questions = [
-#     inquirer.List(
-#         "select_location",
-#         message=f"Select location:",
-#         choices=locations,
-#     ),
-# ]
-# answers = inquirer.prompt(questions)
-# selected_location = answers["select_location"]
 selected_location = iterfzf(locations, multi=False, exact=True)
 
+if selected_location == "":
+    selected_location = home_dir
+
 if args.fuzzy_search:
-    tmp_file = "/tmp/scotty.dirs.txt"
     cmd = f"ssh {selected_server} find {selected_location} -maxdepth {args.fuzzy_depth} -type d"
     content = sub_check(cmd)
-    print(content)
     str_list = content.split("\n")
     str_list = list(filter(None, str_list))  # remove empty values
 

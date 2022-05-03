@@ -3,10 +3,13 @@
 import argparse
 import glob
 import inquirer
+from iterfzf import iterfzf
+import inspect
 import os
 
 # from pprint import pprint
 import re
+import subprocess
 import sys
 import yaml
 
@@ -54,7 +57,115 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "--fuzzy-search",
+    "-f",
+    help="fuzzy find within directory",
+    required=False,
+    action="store_true",
+)
+
+parser.add_argument(
+    "--fuzzy-depth",
+    "-d",
+    help="fuzzy find depth",
+    required=False,
+    default=3,
+)
+
 args = parser.parse_args()
+
+# -----------------------------------------------
+# Functions
+# -----------------------------------------------
+def confirm(message="", default="Y", choices=["y", "n"], force_script_exit=True):
+
+    if not message == "":
+        print(message)
+
+    answer = None
+    choices = [item.lower() for item in choices]
+
+    choices_display = list(
+        map(lambda x: x.upper() if x.lower() == default.lower() else x, choices)
+    )
+
+    if force_script_exit:
+        continue_text = "Continue?"
+    else:
+        continue_text = "Your answer:"
+
+    while answer not in choices:
+        script_exit = False
+        answer = input(f"{continue_text} [" + "/".join(choices_display) + "] ").lower()
+
+        # set empty answer to default
+        if answer == "":
+            answer = default.lower()
+
+        # exit script
+        if answer == "n":
+            if force_script_exit:
+                script_exit = True
+
+    if script_exit:
+        print("Exiting...")
+        sys.exit()
+    else:
+        return answer
+
+
+def fail(message_text):
+    callerframerecord = inspect.stack()[1]  # 0 represents this line
+    # 1 represents line at caller
+    frame = callerframerecord[0]
+    info = inspect.getframeinfo(frame)
+
+    text = "{}, line {} \n{}".format(info.filename, info.lineno, message_text)
+    print(text)
+    sys.exit()
+
+
+# capture the output of a command
+def sub_check(cmd, directory=""):
+
+    cmd = re.sub(" +", " ", cmd)
+
+    # if directory == "":
+    #     directory = app_base_dir
+
+    try:
+        output = subprocess.check_output(
+            # cmd, shell=True, cwd=directory, encoding="UTF-8"
+            cmd,
+            shell=True,
+            encoding="UTF-8",
+        )
+    except subprocess.CalledProcessError:
+        sys.exit()
+
+    return output.strip()
+
+
+# run a command
+def sub_run(cmd, directory=""):
+
+    cmd = re.sub(" +", " ", cmd)
+
+    # if directory == "":
+    #     directory = app_base_dir
+
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            universal_newlines=True,
+            # cwd=directory,
+            shell=True,
+        )
+    except subprocess.CalledProcessError:
+        sys.exit()
+
 
 # -----------------------------------------------
 # Get config file
@@ -96,15 +207,17 @@ elif args.browse:
 
     config_files.sort()
 
-    questions = [
-        inquirer.List(
-            "select_path",
-            message=f"Select config file:",
-            choices=config_files,
-        ),
-    ]
-    answers = inquirer.prompt(questions)
-    file_path = answers["select_path"]
+    # questions = [
+    #     inquirer.List(
+    #         "select_path",
+    #         message=f"Select config file:",
+    #         choices=config_files,
+    #     ),
+    # ]
+    # answers = inquirer.prompt(questions)
+    # file_path = answers["select_path"]
+    file_path = iterfzf(config_files, multi=False, exact=True)
+
 else:
     sys.exit()
 
@@ -152,15 +265,17 @@ for fqdn, metadata in config["servers"].items():
 
 servers_display.sort()
 
-questions = [
-    inquirer.List(
-        "select_server",
-        message=f"Select server:",
-        choices=servers_display,
-    ),
-]
-answers = inquirer.prompt(questions)
-selected_server = answers["select_server"]
+# questions = [
+#     inquirer.List(
+#         "select_server",
+#         message=f"Select server:",
+#         choices=servers_display,
+#     ),
+# ]
+# answers = inquirer.prompt(questions)
+# selected_server = answers["select_server"]
+
+selected_server = iterfzf(servers_display, multi=False, exact=True)
 
 # -----------------------------------------------
 # Get list of locations
@@ -185,17 +300,48 @@ if not len(locations):
     print("No location found...")
     sys.exit(1)
 
+locations.append("/")
+
+home_dir = sub_check(f"ssh {selected_server} 'eval echo $HOME'")
+locations.append(home_dir)
+
 locations.sort()
 
-questions = [
-    inquirer.List(
-        "select_location",
-        message=f"Select location:",
-        choices=locations,
-    ),
-]
-answers = inquirer.prompt(questions)
-selected_location = answers["select_location"]
+# questions = [
+#     inquirer.List(
+#         "select_location",
+#         message=f"Select location:",
+#         choices=locations,
+#     ),
+# ]
+# answers = inquirer.prompt(questions)
+# selected_location = answers["select_location"]
+selected_location = iterfzf(locations, multi=False, exact=True)
+
+if args.fuzzy_search:
+    tmp_file = "/tmp/scotty.dirs.txt"
+    cmd = f"ssh {selected_server} find {selected_location} -maxdepth {args.fuzzy_depth} -type d"
+    content = sub_check(cmd)
+    print(content)
+    str_list = content.split("\n")
+    str_list = list(filter(None, str_list))  # remove empty values
+
+    # filter out hidden dirs
+    directories = []
+    for item in str_list:
+        print(item)
+        if not re.search("\/\.", item):
+            directories.append(item)
+
+    if not len(directories):
+        print("No directories found!")
+        sys.exit(1)
+
+    selected_location = iterfzf(directories, multi=False, exact=True)
+
+if not selected_location:
+    print("Directory is empty!")
+    sys.exit(1)
 
 # -----------------------------------------------
 # Execute command
@@ -206,4 +352,4 @@ if args.interactive:
     print(cmd)
     answer = input(f"Continue? [Y/n]")
 
-os.system(cmd)
+sub_run(cmd)

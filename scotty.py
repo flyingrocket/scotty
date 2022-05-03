@@ -237,20 +237,22 @@ with open(file_path) as file:
 servers_display = []
 for fqdn, metadata in config["servers"].items():
 
-    description = [fqdn.ljust(40)]
+    if metadata:
+        description = [fqdn.ljust(40)]
+        # for field in ['locations', 'description']:
+        for field in ["description"]:
+            if field in metadata:
 
-    # for field in ['locations', 'description']:
-    for field in ["description"]:
-        if field in metadata:
+                if isinstance(metadata[field], list):
+                    data = ",".join(metadata[field])
+                else:
+                    data = metadata[field]
 
-            if isinstance(metadata[field], list):
-                data = ",".join(metadata[field])
-            else:
-                data = metadata[field]
+                description.append(f"{data}".ljust(20))
 
-            description.append(f"{data}".ljust(20))
-
-    description = " ".join(description)
+        description = " ".join(description)
+    else:
+        description = fqdn
 
     servers_display.append(description)
 
@@ -267,19 +269,12 @@ print(f"Show locations for {selected_server}...")
 
 locations = []
 
-if "locations" not in config["servers"][selected_server]:
-    print("No locations defined...")
-    sys.exit(1)
-
-# configuration for server
-for key in config["servers"][selected_server]["locations"]:
-    if key in config["locations"]:
-        for location in config["locations"][key]:
-            locations.append(location)
-
-if not len(locations):
-    print("No location found...")
-    sys.exit(1)
+if "locations" in config["servers"][selected_server]:
+    # configuration for server
+    for key in config["servers"][selected_server]["locations"]:
+        if key in config["locations"]:
+            for location in config["locations"][key]:
+                locations.append(location)
 
 locations.append("/")
 
